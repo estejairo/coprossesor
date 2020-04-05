@@ -43,21 +43,25 @@ module top(
     logic ena;
     logic wea;
     logic [9:0] addra;
+    logic [9:0] addra_i;
     logic [7:0] dina;
     logic enb;
     logic [9:0] addrb;
+    logic [9:0] addrb_i;
     logic [7:0] doutb;
     blk_mem_gen_0 bram_a (
         .clka(CLK100MHZ),    // input wire clka
         .ena(ena),      // input wire ena
         .wea(wea),      // input wire [0 : 0] wea
-        .addra(addra),  // input wire [9 : 0] addra
-        .dina(dina),    // input wire [7 : 0] dina
+        .addra(addra_i[9:0]),  // input wire [9 : 0] addra
+        .dina(dina[7:0]),    // input wire [7 : 0] dina
         .clkb(CLK100MHZ),    // input wire clkb
         .enb(enb),      // input wire enb
-        .addrb(addrb),  // input wire [9 : 0] addrb
-        .doutb(doutb)  // output wire [7 : 0] doutb
+        .addrb(addrb_i[9:0]),  // input wire [9 : 0] addrb
+        .doutb(doutb[7:0])  // output wire [7 : 0] doutb
     );
+    assign addra_i[9:0] = addra[9:0];
+    assign addrb_i[9:0] = addra[9:0];
 
 
     //UART
@@ -80,9 +84,9 @@ module top(
 
 
     enum logic [7:0]{IDLE, COMMAND, WRITE, WA, READ,  RA, RESPONSE, END} state, state_next;
-    logic [9:0]addra_next = 10'd0;
-    logic [9:0]addrb_next = 10'd0;
-    logic [7:0]number = 8'd0;
+    logic [9:0] addra_next = 10'd0;
+    logic [9:0] addrb_next = 10'd0;
+    logic [7:0] number = 8'd0;
     logic [7:0] number_next = 8'd0;
     always_comb begin
         
@@ -111,6 +115,9 @@ module top(
                             if (rx_data_ready&&(byte_received[7:0]=="w")) begin
                                 state_next = WRITE;
                             end
+                            else if (rx_data_ready&&(byte_received[7:0]=="r")) begin
+                                state_next = READ;
+                            end
                             else if (rx_data_ready) begin
                                 state_next = RESPONSE;
                                 byte_to_send[7:0] = "E";
@@ -119,10 +126,10 @@ module top(
                         end
             WRITE:      begin
                             state_next = WRITE;
-                            if (rx_data_ready&&(byte_received[7:0]=="a")) begin
+                            if (rx_data_ready&&(byte_received[7:0]==8'hA)) begin
                                 state_next = WA;
                             end
-                            else if (rx_data_ready) begin
+                            else if (rx_data_ready&&(byte_received[7:0]!="a")) begin
                                 state_next = RESPONSE;
                                 byte_to_send[7:0] = "E";
                                 tx_start = 1'b1;
@@ -153,14 +160,14 @@ module top(
                         end
             READ:      begin
                             state_next = READ;
-                            if (rx_data_ready&&(byte_received[7:0]=="a")) begin
+                            if (rx_data_ready&&(byte_received[7:0]==8'hA)) begin
                                 state_next = RA;
                                 enb=1'b1;
                                 addrb_next[9:0]=addrb[9:0]+'d1;
                                 byte_to_send[7:0] = doutb[7:0];
                                 tx_start = 1'b1;
                             end
-                            else if (rx_data_ready) begin
+                            else if (rx_data_ready&&(byte_received[7:0]!="a")) begin
                                 state_next = RESPONSE;
                                 byte_to_send[7:0] = "E";
                                 tx_start = 1'b1;
