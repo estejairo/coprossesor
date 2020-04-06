@@ -8,12 +8,12 @@ module command_decoder(
 );
 
     // Last 3 data bytes concatenation
-    logic [23:0] data_array;
-    logic [23:0] data_array_next;
+    logic [23:0] data_array = 24'd0;
+    logic [23:0] data_array_next = 24'd0;
 
     always_comb begin
         if (rx_data_ready)
-            data_array_next[23:0] = {data_array_next[23:8],byte_received[7:0]};
+            data_array_next[23:0] = {data_array_next[15:0],byte_received[7:0]};
     end
 
     always_ff @(posedge clk) begin
@@ -24,18 +24,21 @@ module command_decoder(
     end
 
     //FSM
-    enum logic [1:0]{IDLE, READ_A} state, state_next;
+    enum logic [1:0]{IDLE, READ_A, BUSY} state, state_next;
     assign  command[1:0] = state[1:0];
 
     always_comb begin
         state_next[1:0] = IDLE;
         case(state)
             IDLE:   begin
-                        if (data_array=={"ra",8'hA})
+                        if (data_array=={"ra",8'h0A})
                             state_next[1:0] = READ_A;
                     end
             READ_A: begin
-                        state_next = READ_A;
+                        state_next = BUSY;
+                    end
+            BUSY:   begin
+                        state_next = BUSY;
                         if (!coprocessor_busy)
                             state_next[1:0] = IDLE;
                     end

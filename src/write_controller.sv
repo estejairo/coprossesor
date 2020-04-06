@@ -6,16 +6,22 @@ module write_controller(
     output  logic en,
     output  logic we,
     output  logic [9:0] addr,
-    output  logic [7:0] din
+    output  logic [7:0] din,
+    output  logic [2:0] status,
+    output  logic [23:0] array_next,
+    output  logic [23:0] array
 );
 
     // Last 3 data bytes concatenation
-    logic [23:0] data_array;
-    logic [23:0] data_array_next;
+    logic [23:0] data_array = 24'd0;
+    logic [23:0] data_array_next = 24'd0;
+
+    assign array_next[23:0] = data_array_next[23:0];
+    assign array[23:0] = data_array[23:0];
 
     always_comb begin
         if (rx_data_ready)
-            data_array_next[23:0] = {data_array_next[23:8],byte_received[7:0]};
+            data_array_next[23:0] = {data_array_next[15:0],byte_received[7:0]};
     end
 
     always_ff @(posedge clk) begin
@@ -27,8 +33,11 @@ module write_controller(
     
     //FSM
     enum logic [2:0]{IDLE, WAIT, WRITE} state, state_next;
+    assign status[2:0] = state[2:0];
+
     logic   addr_reset;
-    logic   [9:0] addr_next;
+    logic   [9:0] addr_next = 10'd0;
+    logic   [7:0] din_next = 8'd0;
 
     always_comb begin
         state_next[2:0] = IDLE;
@@ -38,7 +47,7 @@ module write_controller(
         addr_reset = 1'd1;
         case(state)
             IDLE:   begin
-                        if (data_array=={"ra",8'hA}) begin
+                        if (data_array[23:0]=={"wa",8'h0A}) begin
                             state_next[2:0] = WAIT;
                             addr_reset = 1'd0;
                         end
@@ -46,14 +55,10 @@ module write_controller(
             WAIT:   begin
                         state_next = WAIT;
                         addr_reset = 1'd0;
-                        if (addr_next[9:0]==10'd1024) begin
-                            state_next = IDLE;
-                            addr_next[9:0] = 10'd0; 
-                        end
-                        else if (rx_data_ready) begin
+                        if (rx_data_ready) begin
                             state_next[2:0] = WRITE;
                             addr_reset = 1'd0;
-                            din_next[7:0] = byte_received[9:0];
+                            din_next[7:0] = byte_received[7:0];
                         end
 
                     end
@@ -61,8 +66,13 @@ module write_controller(
                         en = 1'b1;
                         we = 1'b1;
                         addr_reset = 1'd0;
-                        adrr_next[9:0] = addr[9:0] + 1'd1;
                         state_next[2:0] = WAIT;
+                        addr_next[9:0] = addr[9:0] + 1'd1;
+                        if (addr[9:0]==10'd1023) begin
+                            state_next = IDLE;
+                            addr_reset = 1'b0;
+                            addr_next[9:0] = 10'd0; 
+                        end
                     end
         endcase
     end
@@ -73,7 +83,7 @@ module write_controller(
         else
             addr[9:0] <= addr_next[9:0];
     end
-    
+
     always_ff @(posedge clk) begin
         if (rst) begin
             state[2:0] <= IDLE;

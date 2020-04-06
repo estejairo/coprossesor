@@ -14,16 +14,17 @@ module processor_core(
 
     output  logic coprocessor_busy
 );
-
+    
     //FSM
     enum logic [1:0]{IDLE, READ_A} master_state, master_state_next;
     logic   busy;
     assign  coprocessor_busy = busy;
+    logic read_done;
 
     always_comb begin
         master_state_next[1:0] = IDLE;
         busy = 1'b0;
-        case(state)
+        case(master_state)
             IDLE:   begin
                         if (command[1:0]==READ_A)
                             master_state_next[1:0] = READ_A;
@@ -46,11 +47,10 @@ module processor_core(
 
 
     //Read Controller
-    logic read_done;
     read_controller read_bramA_inst(
         .clk(clk),
         .rst(rst),
-
+        .master_state(master_state[1:0]),
         .doutb(doutb_A[7:0]),
         .enb(enb_A),
         .addrb(addrb_A[9:0]),
@@ -58,7 +58,7 @@ module processor_core(
         .tx_ongoing(tx_ongoing),
         .tx_start(tx_start),
         .byte_to_send(byte_to_send[7:0]),
-
+        .status(),
         .read_done(read_done)
     );
 endmodule
