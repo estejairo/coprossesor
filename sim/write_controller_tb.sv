@@ -7,12 +7,12 @@ module write_controller_tb();
     logic   [9:0] addr;
     logic   [7:0] din;
     logic   [2:0] status;
-    
-    logic [23:0] array_next;
+    logic [2:0] status_next;
     logic [23:0] array;
 
     initial begin
         status[2:0] = 3'd0;
+        status_next[2:0] = 3'd0;
         i[31:0] = 32'd0;
         clk = 1'b0;
         rst = 1'b0;
@@ -20,7 +20,6 @@ module write_controller_tb();
         byte_received[7:0] = 8'd0;
         addr[9:0] = 10'd0;
         din[7:0] = 8'd0;
-        array_next[23:0] = 24'd0;
         array[23:0] = 24'd0;
     end
 
@@ -80,7 +79,7 @@ module write_controller_tb();
         .addr(addr[9:0]),
         .din(din[7:0]),
         .status(status[2:0]),
-        .array_next(array_next[23:0]),
+        .status_next(status_next[2:0]),
         .array(array[23:0])
     );
 endmodule

@@ -12,7 +12,9 @@ module read_controller_tb();
     logic tx_start;
     logic [7:0] byte_to_send;
 
-    logic [2:0] status;
+    logic [5:0] status;
+    logic [5:0] status_next;
+    
 
     logic read_done;
 
@@ -28,7 +30,8 @@ module read_controller_tb();
         //tx_start = 1'd0;
         byte_to_send[7:0] = 8'd0;
         //read_done = 1'b0;
-        status[2:0] = 3'd0;
+        status[5:0] = 6'd0;
+        status_next[5:0] = 6'd0;
     end
 
     always 
@@ -36,20 +39,20 @@ module read_controller_tb();
 
     always begin
         #1
-        #10     master_state[1:0] = 2'd2;
-        #2;
+        #10     master_state[1:0] = 2'd1;
+        #8;
         for (i = 0;i<1023 ;i=i+1 ) begin
-                  doutb[7:0] = 'd1023-i;
-            #2      tx_ongoing = 1'd1;
                     doutb[7:0] = 'd1023-i;
+            #2      tx_ongoing = 1'd1;
             #14     tx_ongoing = 1'd0;
+            #6;
         end
               doutb[7:0] = 'd1023-i;
         #2      tx_ongoing = 1'd1;
                 doutb[7:0] = 'd1023-i;
         #2      master_state[1:0] = 2'd0;
         #12     tx_ongoing = 1'd0;
-        #100;
+        #101;
     end
 
     
@@ -66,7 +69,8 @@ module read_controller_tb();
         .tx_start(tx_start),
         .byte_to_send(byte_to_send[7:0]),
 
-        .status(status[2:0]),
+        .status(status[5:0]),
+        .status_next(status_next[5:0]),
 
         .read_done(read_done)
     );
